@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Question = require('../models/Question');
+const { calculateScores } = require('./answers');
 
 // Get all questions
 router.get('/', async (req, res) => {
@@ -36,9 +37,15 @@ router.post('/correct-answers', async (req, res) => {
         update: { correctAnswer: answer.answer }
       }
     }));
-
     await Question.bulkWrite(updates);
-    res.status(200).json({ message: 'Correct answers updated successfully' });
+    
+    // Calcular puntajes automáticamente después de guardar las respuestas correctas
+    const scoresCalculated = await calculateScores();
+    if (!scoresCalculated) {
+      return res.status(500).json({ message: 'Error calculating scores' });
+    }
+    
+    res.status(200).json({ message: 'Correct answers updated and scores calculated successfully' });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

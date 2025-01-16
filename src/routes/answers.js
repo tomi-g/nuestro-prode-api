@@ -3,23 +3,8 @@ const router = express.Router();
 const Answer = require('../models/Answer');
 const Question = require('../models/Question');
 
-// Submit player answers
-router.post('/', async (req, res) => {
-  const answer = new Answer({
-    playerName: req.body.playerName,
-    answers: req.body.answers
-  });
-
-  try {
-    const newAnswer = await answer.save();
-    res.status(201).json(newAnswer);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-// Calculate scores after admin submits correct answers
-router.post('/calculate-scores', async (req, res) => {
+// Función para calcular puntajes
+const calculateScores = async () => {
   try {
     const questions = await Question.find();
     const answers = await Answer.find();
@@ -39,10 +24,29 @@ router.post('/calculate-scores', async (req, res) => {
         { score: score }
       );
     }
-
-    res.status(200).json({ message: 'Scores calculated successfully' });
+    
+    return true;
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error calculating scores:', error);
+    return false;
+  }
+};
+
+// Submit player answers
+router.post('/', async (req, res) => {
+  const answer = new Answer({
+    playerName: req.body.playerName,
+    answers: req.body.answers.map(a => ({
+      questionId: a.questionId,
+      answer: a.answer
+    }))
+  });
+
+  try {
+    const newAnswer = await answer.save();
+    res.status(201).json(newAnswer);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -52,10 +56,21 @@ router.get('/results', async (req, res) => {
     const results = await Answer.find()
       .sort({ score: -1 })
       .select('playerName score');
-    res.json(results);
+    
+    const totalQuestions = await Question.countDocuments();
+    
+    // Agregar totalQuestions a cada resultado
+    const resultsWithTotal = results.map(result => ({
+      playerName: result.playerName,
+      score: result.score,
+      totalQuestions: totalQuestions
+    }));
+    
+    res.json(resultsWithTotal);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
 module.exports = router;
+module.exports.calculateScores = calculateScores;

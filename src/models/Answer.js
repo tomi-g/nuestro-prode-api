@@ -12,7 +12,6 @@ const answerSchema = new mongoose.Schema({
     },
     answer: {
       type: String,
-      enum: ['Tomi', 'Cami'],
       required: true
     }
   }],
